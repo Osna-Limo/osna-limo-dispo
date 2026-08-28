@@ -27,12 +27,13 @@ let tokenClient=null;
 let calendarMapReady=false;
 let loadSequence=0;
 
-const startHour=8,endHour=25,slotMinutes=30,COLLAPSED_WIDTH=18;
+const DEFAULT_START_HOUR=8,END_HOUR=25,slotMinutes=30,COLLAPSED_WIDTH=18;
+let timelineStartHour=DEFAULT_START_HOUR;
 let collapsedResources=new Set(JSON.parse(localStorage.getItem('osna_collapsed_resources')||'[]'));
 
 function mins(t){const[h,m]=t.split(':').map(Number);return h*60+m}
 function spanMins(s,e){let a=mins(s),b=mins(e);if(b<=a)b+=1440;return b-a}
-function yFor(t){return(mins(t)-startHour*60)/slotMinutes*getSlotPx()}
+function yFor(t){return(mins(t)-timelineStartHour*60)/slotMinutes*getSlotPx()}
 function hFor(s,e){return Math.max(document.body.classList.contains('compact-mode')?20:28,spanMins(s,e)/slotMinutes*getSlotPx()-4)}
 function getSlotPx(){return parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--slot'))||34}
 function formatDate(d){return new Intl.DateTimeFormat('de-DE',{timeZone:TIME_ZONE,weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'}).format(d)}
@@ -44,6 +45,7 @@ function showToast(msg,ms=2600){const t=document.getElementById('toast');t.textC
 function escapeHtml(v=''){return String(v).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
 function setStatus(text,state=''){const pill=document.getElementById('statusPill');pill.textContent=text;pill.className=`sync-pill ${state}`.trim()}
 function berlinTime(iso){return new Intl.DateTimeFormat('de-DE',{timeZone:TIME_ZONE,hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date(iso))}
+function updateTimelineStart(){timelineStartHour=events.some(e=>e.carryIn||mins(e.start)<DEFAULT_START_HOUR*60)?0:DEFAULT_START_HOUR}
 
 function dayBounds(d){
   // Die Dispo wird in Deutschland eingesetzt. Der Browser erstellt damit die lokalen
@@ -98,14 +100,31 @@ async function mapVehicleCalendars(){
 async function fetchCalendarEvents(resource,d){
   if(!resource.calendarId)return[];
   const {timeMin,timeMax}=dayBounds(d);
+  const dayStart=new Date(timeMin),dayEnd=new Date(timeMax);
   const params=new URLSearchParams({
     singleEvents:'true',orderBy:'startTime',maxResults:'2500',timeMin,timeMax,timeZone:TIME_ZONE
   });
   const url=`${API_BASE}/calendars/${encodeURIComponent(resource.calendarId)}/events?${params}`;
   const data=await googleGet(url);
-  return(data.items||[]).filter(item=>item.status!=='cancelled'&&item.start?.dateTime&&item.end?.dateTime).map(item=>({
-    id:item.id,res:resource.id,start:berlinTime(item.start.dateTime),end:berlinTime(item.end.dateTime),title:item.summary||'(Ohne Titel)'
-  }));
+  return(data.items||[])
+    .filter(item=>item.status!=='cancelled'&&item.start?.dateTime&&item.end?.dateTime)
+    .map(item=>{
+      const originalStart=new Date(item.start.dateTime);
+      const originalEnd=new Date(item.end.dateTime);
+      if(!(originalStart<dayEnd&&originalEnd>dayStart))return null;
+      const displayStart=originalStart<dayStart?dayStart:originalStart;
+      const displayEnd=originalEnd>dayEnd?dayEnd:originalEnd;
+      return{
+        id:item.id,
+        res:resource.id,
+        start:berlinTime(displayStart.toISOString()),
+        end:berlinTime(displayEnd.toISOString()),
+        title:item.summary||'(Ohne Titel)',
+        carryIn:originalStart<dayStart,
+        carryOut:originalEnd>dayEnd
+      };
+    })
+    .filter(Boolean);
 }
 
 async function loadDay(){
@@ -129,6 +148,7 @@ async function loadDay(){
 }
 
 function render(){
+  updateTimelineStart();
   document.getElementById('dateLabel').textContent=formatDate(date);
   document.getElementById('datePicker').value=dateKey(date);
   const scheduler=document.getElementById('scheduler');scheduler.innerHTML='';
@@ -141,11 +161,22 @@ function render(){
     const btn=document.createElement('button');btn.type='button';btn.className='collapse-btn';btn.textContent=collapsedResources.has(r.id)?'›':'‹';btn.title=collapsedResources.has(r.id)?`${r.name} aufklappen`:`${r.name} minimieren`;
     btn.addEventListener('click',()=>{collapsedResources.has(r.id)?collapsedResources.delete(r.id):collapsedResources.add(r.id);localStorage.setItem('osna_collapsed_resources',JSON.stringify([...collapsedResources]));render()});h.appendChild(btn);scheduler.appendChild(h);
   });
-  const tc=document.createElement('div');tc.className='time-col';for(let h=startHour;h<endHour;h++){for(let half=0;half<2;half++){const x=document.createElement('div');x.className='time-label';x.textContent=half===0?(h===24?'00:00 +1':`${String(h).padStart(2,'0')}:00`):'';tc.appendChild(x)}}scheduler.appendChild(tc);
+  const tc=document.createElement('div');tc.className='time-col';
+  for(let h=timelineStartHour;h<END_HOUR;h++){
+    for(let half=0;half<2;half++){
+      const x=document.createElement('div');x.className='time-label';
+      x.textContent=half===0?(h===24?'00:00 +1':`${String(h).padStart(2,'0')}:00`):'';
+      tc.appendChild(x)
+    }
+  }
+  scheduler.appendChild(tc);
+  const timelineSlots=(END_HOUR-timelineStartHour)*2;
   visible.forEach(r=>{
-    const c=document.createElement('div');c.className='resource-col';if(collapsedResources.has(r.id))c.classList.add('collapsed-col');
+    const c=document.createElement('div');c.className='resource-col';c.style.height=`calc(var(--slot) * ${timelineSlots})`;if(collapsedResources.has(r.id))c.classList.add('collapsed-col');
     events.filter(e=>e.res===r.id).forEach(ev=>{
-      const d=document.createElement('div');d.className='event';d.style.top=`${yFor(ev.start)}px`;d.style.height=`${hFor(ev.start,ev.end)}px`;d.style.borderColor=hexToRgba(r.color,.72);d.style.background=hexToRgba(r.color,collapsedResources.has(r.id)?.82:.44);d.title=`${ev.start}–${ev.end} · ${ev.title}`;
+      const d=document.createElement('div');d.className='event';d.style.top=`${yFor(ev.start)}px`;d.style.height=`${hFor(ev.start,ev.end)}px`;d.style.borderColor=hexToRgba(r.color,.72);d.style.background=hexToRgba(r.color,collapsedResources.has(r.id)?.82:.44);
+      const continuation=ev.carryIn?'Fortsetzung vom Vortag · ':'';
+      d.title=`${continuation}${ev.start}–${ev.end} · ${ev.title}`;
       d.innerHTML=`<div class="t">${escapeHtml(ev.start)}–${escapeHtml(ev.end)}</div><div class="title">${escapeHtml(ev.title)}</div>`;c.appendChild(d)
     });scheduler.appendChild(c);
   });
