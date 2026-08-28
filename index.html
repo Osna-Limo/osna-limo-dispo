@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0f1115">
+  <title>Osna-Limo Disposition</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand"><span>OSNA-LIMO</span> DISPOSITION</div>
+
+      <div class="date-nav" aria-label="Datumsnavigation">
+        <button id="prev" type="button" aria-label="Vorheriger Tag">‹</button>
+        <button id="today" type="button">05.04.2025</button>
+        <button id="next" type="button" aria-label="Nächster Tag">›</button>
+      </div>
+
+      <div class="date" id="dateLabel"></div>
+
+      <div class="view-settings" aria-label="Ansicht einstellen">
+        <div class="view-settings-title">Ansicht</div>
+
+        <div class="setting-box">
+          <label for="colWidth">Breite</label>
+          <input id="colWidth" type="range" min="85" max="220" step="5" value="115">
+          <div class="setting-value"><span id="colWidthValue">115</span> px</div>
+        </div>
+
+        <div class="view-sep"></div>
+
+        <div class="setting-box">
+          <label for="rowHeight">Höhe</label>
+          <input id="rowHeight" type="range" min="18" max="60" step="2" value="34">
+          <div class="setting-value"><span id="rowHeightValue">34</span> px</div>
+        </div>
+
+        <div class="view-sep"></div>
+
+        <div class="setting-box font-box">
+          <label for="eventFont">Schrift</label>
+          <input id="eventFont" type="range" min="8" max="14" step="0.5" value="10.5">
+          <div class="setting-value"><span id="eventFontValue">10.5</span> px</div>
+        </div>
+
+        <div class="view-sep"></div>
+
+        <div class="compact-toggle">
+          <input id="compactMode" type="checkbox">
+          <label for="compactMode">Kompakt</label>
+        </div>
+
+        <button id="resetView" type="button" title="Ansicht zurücksetzen">Reset</button>
+      </div>
+
+      <div class="spacer"></div>
+      <span class="sync-pill" id="statusPill">● Lesemodus</span>
+    </div>
+  </header>
+
+  <main class="wrap" id="scrollArea">
+    <div class="scheduler" id="scheduler" aria-label="Fahrzeug-Disposition"></div>
+  </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
