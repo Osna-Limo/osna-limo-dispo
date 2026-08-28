@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#0f1115">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
   <title>Osna-Limo Disposition</title>
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -14,11 +15,14 @@
 
       <div class="date-nav" aria-label="Datumsnavigation">
         <button id="prev" type="button" aria-label="Vorheriger Tag">‹</button>
-        <button id="today" type="button">05.04.2025</button>
+        <button id="today" type="button">Heute</button>
         <button id="next" type="button" aria-label="Nächster Tag">›</button>
       </div>
 
-      <div class="date" id="dateLabel"></div>
+      <button class="date" id="dateButton" type="button" title="Datum auswählen">
+        <span id="dateLabel"></span>
+      </button>
+      <input id="datePicker" class="date-picker" type="date" aria-label="Datum auswählen">
 
       <div class="view-settings" aria-label="Ansicht einstellen">
         <div class="view-settings-title">Ansicht</div>
@@ -56,7 +60,8 @@
       </div>
 
       <div class="spacer"></div>
-      <span class="sync-pill" id="statusPill">● Lesemodus</span>
+      <button id="authButton" class="auth-btn" type="button">Google verbinden</button>
+      <span class="sync-pill" id="statusPill">● Nicht verbunden</span>
     </div>
   </header>
 
@@ -66,6 +71,8 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
+  <script src="https://accounts.google.com/gsi/client"></script>
+  <script src="config.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
