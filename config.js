@@ -1,5 +1,4 @@
 // Diese Client-ID ist öffentlich und kein Passwort.
-// Sobald der OAuth-Webclient in Google Cloud erstellt wurde, wird die ID hier eingetragen.
 window.OSNA_DISPO_CONFIG = {
-  googleClientId: ''
+  googleClientId: '290142568245-amtu9at6ov3tqq2g1agj2a5qi884usk1.apps.googleusercontent.com'
 };
